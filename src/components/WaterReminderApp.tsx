@@ -217,7 +217,7 @@ export default function Component() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-blue-200 p-2 sm:p-4 md:p-6 lg:p-8">
-      <Card className="w-full sm:max-w-md md:max-w-lg lg:max-w-4xl mx-auto overflow-hidden shadow-xl">
+      <Card className="max-w-[320px] sm:max-w-md md:max-w-lg lg:max-w-4xl mx-auto overflow-hidden shadow-xl">
         <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 sm:p-4 md:p-5 lg:p-6">
           <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center justify-center">
             <DropletIcon className="mr-2" />
