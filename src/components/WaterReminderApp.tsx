@@ -99,7 +99,17 @@ export default function Component() {
         setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }))
       }
     }
-  }, [selectedDate, sleepEnd, reminderInterval, sleepStart, generateDailyData, memoizedWaterData])
+  }, [selectedDate, generateDailyData, memoizedWaterData])
+
+  useEffect(() => {
+    if (selectedDate) {
+      const dateKey = format(selectedDate, 'yyyy-MM-dd')
+      if (!memoizedWaterData[dateKey]) {
+        const newDailyData = generateDailyData(selectedDate)
+        setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }))
+      }
+    }
+  }, [selectedDate, generateDailyData, memoizedWaterData])
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -111,8 +121,14 @@ export default function Component() {
     // Clear existing notification timeouts
     notificationTimeouts.current.forEach(clearTimeout)
     notificationTimeouts.current = []
-
     // Set up new notification timeouts
+    if (selectedDate) {
+      const dateKey = format(selectedDate, 'yyyy-MM-dd');
+      if (!waterData[dateKey]) {
+        const newDailyData = generateDailyData(selectedDate);
+        setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }));
+      }
+    }
     if (notificationsEnabled && selectedDate && isEqual(startOfDay(selectedDate), startOfDay(new Date()))) {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
       const dayData = waterData[dateKey]
