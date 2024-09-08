@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, ClockIcon, DropletIcon, BedIcon, TimerIcon as _TimerIcon, GlassWaterIcon, ChevronLeftIcon, ChevronRightIcon, BellIcon } from "lucide-react"
+import { CalendarIcon, ClockIcon, DropletIcon, BedIcon, GlassWaterIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
@@ -21,16 +21,6 @@ type DailyData = {
   glasses: GlassData[];
   glassesDrunk: number;
   glassesPending: number;
-}
-
-// Move sendNotification outside the component
-function sendNotification(message: string, notificationsEnabled: boolean) {
-  if (notificationsEnabled) {
-    new Notification('Water Reminder', {
-      body: message,
-      icon: '/water-icon.png' // Make sure to add this icon to your public folder
-    })
-  }
 }
 
 export default function Component() {
@@ -89,27 +79,15 @@ export default function Component() {
     }
   }, [calculateMlPerInterval, sleepEnd, reminderInterval])
 
-  const memoizedWaterData = useMemo(() => waterData, [JSON.stringify(waterData)])
-
   useEffect(() => {
     if (selectedDate) {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
-      if (!memoizedWaterData[dateKey]) {
+      if (!waterData[dateKey]) {
         const newDailyData = generateDailyData(selectedDate)
         setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }))
       }
     }
-  }, [selectedDate, generateDailyData, memoizedWaterData])
-
-  useEffect(() => {
-    if (selectedDate) {
-      const dateKey = format(selectedDate, 'yyyy-MM-dd')
-      if (!memoizedWaterData[dateKey]) {
-        const newDailyData = generateDailyData(selectedDate)
-        setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }))
-      }
-    }
-  }, [selectedDate, generateDailyData, memoizedWaterData])
+  }, [selectedDate, sleepEnd, reminderInterval, sleepStart, generateDailyData, waterData])
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -117,18 +95,21 @@ export default function Component() {
     }
   }, [])
 
+  const sendNotification = useCallback((message: string) => {
+    if (notificationsEnabled) {
+      new Notification('Water Reminder', {
+        body: message,
+        icon: '/water-icon.png' // Make sure to add this icon to your public folder
+      })
+    }
+  }, [notificationsEnabled])
+
   useEffect(() => {
     // Clear existing notification timeouts
     notificationTimeouts.current.forEach(clearTimeout)
     notificationTimeouts.current = []
+
     // Set up new notification timeouts
-    if (selectedDate) {
-      const dateKey = format(selectedDate, 'yyyy-MM-dd');
-      if (!waterData[dateKey]) {
-        const newDailyData = generateDailyData(selectedDate);
-        setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }));
-      }
-    }
     if (notificationsEnabled && selectedDate && isEqual(startOfDay(selectedDate), startOfDay(new Date()))) {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
       const dayData = waterData[dateKey]
@@ -136,7 +117,7 @@ export default function Component() {
         dayData.glasses.forEach((glass, index) => {
           if (!glass.filled && isAfter(glass.time, new Date())) {
             const timeout = setTimeout(() => {
-              sendNotification(`Time to drink water! Glass ${index + 1} of ${dayData.glasses.length}`, notificationsEnabled)
+              sendNotification(`Time to drink water! Glass ${index + 1} of ${dayData.glasses.length}`)
             }, glass.time.getTime() - new Date().getTime())
             notificationTimeouts.current.push(timeout)
           }
@@ -147,7 +128,7 @@ export default function Component() {
     return () => {
       notificationTimeouts.current.forEach(clearTimeout)
     }
-  }, [notificationsEnabled, selectedDate, waterData])
+  }, [notificationsEnabled, selectedDate, waterData, sendNotification])
 
   const formatTime = (date: Date) => {
     return format(date, "h:mm a")
@@ -167,7 +148,7 @@ export default function Component() {
         setWaterData(newWaterData)
 
         if (dayData.glasses[index].filled) {
-          sendNotification(`Great job! You've drunk ${dayData.glassesDrunk} glasses of water today.`, notificationsEnabled)
+          sendNotification(`Great job! You've drunk ${dayData.glassesDrunk} glasses of water today.`)
         }
       }
     }
@@ -250,7 +231,7 @@ export default function Component() {
               disabled={notificationsEnabled}
               className="w-full py-3 text-lg font-semibold"
             >
-              {notificationsEnabled ? 'Notifications Enabled' : 'Enable Notification on Your Device'}
+              {notificationsEnabled ? 'Notifications Enabled' : 'Enable Notifications on All Devices'}
             </Button>
           </div>
 
@@ -417,7 +398,7 @@ export default function Component() {
             </Card>
             <Card className="bg-gradient-to-br from-yellow-400 to-yellow-500 text-white">
               <CardContent className="p-3 text-center">
-                <p className="text-xs font-semibold mb-1">Glasses Pending Till Now, Today</p>
+                <p className="text-xs font-semibold mb-1">Glasses Pending</p>
                 <p className="text-lg font-bold">{selectedDayData?.glassesPending || 0}</p>
               </CardContent>
             </Card>
