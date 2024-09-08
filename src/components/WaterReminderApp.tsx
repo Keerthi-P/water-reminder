@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,6 +23,16 @@ type DailyData = {
   glassesPending: number;
 }
 
+// Move sendNotification outside the component
+function sendNotification(message: string, notificationsEnabled: boolean) {
+  if (notificationsEnabled) {
+    new Notification('Water Reminder', {
+      body: message,
+      icon: '/water-icon.png' // Make sure to add this icon to your public folder
+    })
+  }
+}
+
 export default function Component() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
@@ -42,52 +52,6 @@ export default function Component() {
 
     return () => clearInterval(timer)
   }, [])
-
-  useEffect(() => {
-    if (selectedDate) {
-      const dateKey = format(selectedDate, 'yyyy-MM-dd')
-      if (!waterData[dateKey]) {
-        const newDailyData = generateDailyData(selectedDate)
-        setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }))
-      }
-    }
-  }, [selectedDate, sleepEnd, reminderInterval, sleepStart])
-
-  useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationsEnabled(Notification.permission === 'granted')
-    }
-  }, [])
-
-  useEffect(() => {
-    // Clear existing notification timeouts
-    notificationTimeouts.current.forEach(clearTimeout)
-    notificationTimeouts.current = []
-
-    // Set up new notification timeouts
-    if (notificationsEnabled && selectedDate && isEqual(startOfDay(selectedDate), startOfDay(new Date()))) {
-      const dateKey = format(selectedDate, 'yyyy-MM-dd')
-      const dayData = waterData[dateKey]
-      if (dayData) {
-        dayData.glasses.forEach((glass, index) => {
-          if (!glass.filled && isAfter(glass.time, new Date())) {
-            const timeout = setTimeout(() => {
-              sendNotification(`Time to drink water! Glass ${index + 1} of ${dayData.glasses.length}`)
-            }, glass.time.getTime() - new Date().getTime())
-            notificationTimeouts.current.push(timeout)
-          }
-        })
-      }
-    }
-
-    return () => {
-      notificationTimeouts.current.forEach(clearTimeout)
-    }
-  }, [notificationsEnabled, selectedDate, waterData])
-
-  const formatTime = (date: Date) => {
-    return format(date, "h:mm a")
-  }
 
   const calculateMlPerInterval = useCallback(() => {
     const sleepStartTime = parse(sleepStart, 'hh:mm a', new Date())
@@ -125,6 +89,54 @@ export default function Component() {
     }
   }, [calculateMlPerInterval, sleepEnd, reminderInterval])
 
+  const memoizedWaterData = useMemo(() => waterData, [JSON.stringify(waterData)])
+
+  useEffect(() => {
+    if (selectedDate) {
+      const dateKey = format(selectedDate, 'yyyy-MM-dd')
+      if (!memoizedWaterData[dateKey]) {
+        const newDailyData = generateDailyData(selectedDate)
+        setWaterData(prev => ({ ...prev, [dateKey]: newDailyData }))
+      }
+    }
+  }, [selectedDate, sleepEnd, reminderInterval, sleepStart, generateDailyData, memoizedWaterData])
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationsEnabled(Notification.permission === 'granted')
+    }
+  }, [])
+
+  useEffect(() => {
+    // Clear existing notification timeouts
+    notificationTimeouts.current.forEach(clearTimeout)
+    notificationTimeouts.current = []
+
+    // Set up new notification timeouts
+    if (notificationsEnabled && selectedDate && isEqual(startOfDay(selectedDate), startOfDay(new Date()))) {
+      const dateKey = format(selectedDate, 'yyyy-MM-dd')
+      const dayData = waterData[dateKey]
+      if (dayData) {
+        dayData.glasses.forEach((glass, index) => {
+          if (!glass.filled && isAfter(glass.time, new Date())) {
+            const timeout = setTimeout(() => {
+              sendNotification(`Time to drink water! Glass ${index + 1} of ${dayData.glasses.length}`, notificationsEnabled)
+            }, glass.time.getTime() - new Date().getTime())
+            notificationTimeouts.current.push(timeout)
+          }
+        })
+      }
+    }
+
+    return () => {
+      notificationTimeouts.current.forEach(clearTimeout)
+    }
+  }, [notificationsEnabled, selectedDate, waterData])
+
+  const formatTime = (date: Date) => {
+    return format(date, "h:mm a")
+  }
+
   const handleGlassClick = (index: number) => {
     if (selectedDate) {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
@@ -139,7 +151,7 @@ export default function Component() {
         setWaterData(newWaterData)
 
         if (dayData.glasses[index].filled) {
-          sendNotification(`Great job! You've drunk ${dayData.glassesDrunk} glasses of water today.`)
+          sendNotification(`Great job! You've drunk ${dayData.glassesDrunk} glasses of water today.`, notificationsEnabled)
         }
       }
     }
@@ -198,15 +210,6 @@ export default function Component() {
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
-      })
-    }
-  }
-
-  const sendNotification = (message: string) => {
-    if (notificationsEnabled) {
-      new Notification('Water Reminder', {
-        body: message,
-        icon: '/water-icon.png' // Make sure to add this icon to your public folder
       })
     }
   }
