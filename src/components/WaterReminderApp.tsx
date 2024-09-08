@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, ClockIcon, DropletIcon, BedIcon, TimerIcon, GlassWaterIcon, ChevronLeftIcon, ChevronRightIcon, BellIcon } from "lucide-react"
+import { CalendarIcon, ClockIcon, DropletIcon, BedIcon, TimerIcon as _TimerIcon, GlassWaterIcon, ChevronLeftIcon, ChevronRightIcon, BellIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
